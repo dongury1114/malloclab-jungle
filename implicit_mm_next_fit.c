@@ -24,15 +24,15 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "SWJungle_week06_10",
+    "team 7",
     /* First member's full name */
-    "JongWoo Han",
+    "donggyu lee",
     /* First member's email address */
-    "jongwoo0221@gmail.com",
+    "dongury1114@gmail.com",
     /* Second member's full name (leave blank if none) */
-    "Humyung Lee",
+    "",
     /* Second member's email address (leave blank if none) */
-    "lhm"
+    ""
 };
 
 /* Basic constants and macros */
