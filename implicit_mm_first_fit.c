@@ -42,14 +42,14 @@ team_t team = {
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
 /* Basic constants and macros */
-#define WSIZE 4 // word and header footer 사이즈를 byte로. 
-#define DSIZE 8 // double word size를 byte로
-#define CHUNKSIZE (1<<12) // heap을 늘릴 때 얼만큼 늘릴거냐? 4kb 분량.
+#define WSIZE 4 // 1개의 word size, word and header footer 사이즈를 byte로. 
+#define DSIZE 8 // 2개의 word size, double word size를 byte로
+#define CHUNKSIZE (1<<12) // heap을 확장할 때 확장할 최소 크기
 
 #define MAX(x,y) ((x)>(y)? (x) : (y)) // x,y 중 큰 값을 가진다.
 
 // size를 pack하고 개별 word 안의 bit를 할당 (size와 alloc을 비트연산), 헤더에서 써야하기 때문에 만듬.
-#define PACK(size,alloc) ((size)| (alloc)) // alloc : 가용여부 (ex. 000) / size : block size를 의미. =>합치면 온전한 주소가 나온다.
+#define PACK(size,alloc) ((size)| (alloc)) // Header에 들어갈 값, alloc : 가용여부 (ex. 000) / size : block size를 의미. =>합치면 온전한 주소가 나온다.
 
 /* address p위치에 words를 read와 write를 한다. */
 #define GET(p) (*(unsigned int*)(p)) // 포인터를 써서 p를 참조한다. 주소와 값(값에는 다른 블록의 주소를 담는다.)을 알 수 있다. 다른 블록을 가리키거나 이동할 때 쓸 수 있다. 
@@ -78,9 +78,10 @@ static char* last_bp; // 마지막에 검사한 블록의 포인터
 
 
 /* mm_init - initialize the malloc package. */
+/*mm_init은 할당기를 초기화하고 성공하면 0, 실패면 -1을 리턴, 초기화 하는 과정에는 free list의 prologue header, prologue footer, Epilogue header를 만드는 과정이 포함 */
 int mm_init(void){
     /* Create the initial empty heap */
-    if ((heap_listp = mem_sbrk(4 * WSIZE)) == (void *) - 1)
+    if ((heap_listp = mem_sbrk(4 * WSIZE)) == (void *) - 1) // 최소 블록의 크기 16바이트
         return -1;
     PUT(heap_listp, 0);                            // Alignment padding
     PUT(heap_listp + (1 * WSIZE), PACK(DSIZE, 1)); // Prologue header
@@ -93,20 +94,20 @@ int mm_init(void){
         return -1;
     return 0;
 }
-
+/*확장하고자 하는 사이즈를 인자로 받는 extend_heap 함수는 인자로 받은 사이즈를 더블워드 정렬 조건에 맞게 8의 배수로 만들고 그 사이즈 만큼 힙을 확장*/
 static void *extend_heap(size_t words){
     char *bp;
     size_t size;
 
     /* Allocate an even number of words to maintain alignment */
-    size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
+    size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE; // 8의 배수 만들기
     if ((long)(bp = mem_sbrk(size)) == -1)
         return NULL;
 
     /* Initialize free block header/footer and the epliogue header */
-    PUT(HDRP(bp), PACK(size, 0));         // Free block header
-    PUT(FTRP(bp), PACK(size, 0));         // Free block footer
-    PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1)); // New epilogue header
+    PUT(HDRP(bp), PACK(size, 0));         // size 크기의 head 블록 생성
+    PUT(FTRP(bp), PACK(size, 0));         // size 크기의 footer 블록 생성
+    PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1)); // 새로운 epilogue block 생성
 
     /* Coalesce if the previous block was free */
     return coalesce(bp);

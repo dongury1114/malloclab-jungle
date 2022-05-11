@@ -262,7 +262,7 @@ static void* find_fit(size_t asize) {
 }
 
 /*
-place(bp, size): 요구 메모리를 할당할 수 있는 가용 블록을 할당. 이때, 분할이 가능하면 분할
+place(bp, size): 선택된 가용영역에 할당, 가용영역이 필요한 영역 + 최소 블럭 크기(16byte) 이상이라면 필요한 영역만큼 할당시킨 후 분할 실행
 */
 
 static void place(void* bp, size_t asize) {
